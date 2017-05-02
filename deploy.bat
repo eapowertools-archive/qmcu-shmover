@@ -1,0 +1,1 @@
+xcopy shmover ..\..\QlikSenseQMCUtility\plugins\shmover /I /Y /R /S /EXCLUDE:exclusionList.txt

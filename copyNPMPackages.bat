@@ -1,0 +1,1 @@
+xcopy shmover\node_modules ..\..\QlikSenseQMCUtility\plugins\shmover\node_modules /I /Y /R /S

@@ -1,0 +1,87 @@
+<div>
+    <div id="page-content-header" class="navbar-fixed-top flex-container">
+        <h1 class="title">Sheet Mover on: {{model.host}}</h1>
+        <button style="float:right;margin-right:400px;margin-top:20px;" class="lui-button  lui-button--toolbar-inverse" id="help-dialog"
+            ng-click="model.openHelp()">?</button>
+    </div>
+    <div id="page-content-body">
+        <div id="main">
+            <form name="form" id="shmoverForm" enctype="multipart/form-data" novalidate>
+                <div id="left">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">Source Hostname</div>
+                        <div class="form-group hostname">
+                            <input type="text" class="lui-input" placeholder="enter hostname here" ng-model="model.srcServer" id="srcHostname" name="srcHostname"
+                            />
+                            <div class="frame lui-bg-default">
+                                <button class="lui-button" style="float: right; margin-top: 5px; margin-bottom: 5px;" ng-click="model.loadSourceApps()">Load Apps</button>
+                            </div>
+                            <div style="padding-bottom:15px">
+                                <select name="srcAppsList" id="srcAppsList" class="lui-select" ng-change="model.selectSrcApp(model.selectedSrcApp.id)" ng-model="model.selectedSrcApp"
+                                    ng-init="model.initSrcApps()" ng-options="app.name for app in model.srcApps track by app.id">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-primary" ng-show="model.selectedSrcApp !=null">
+                        <div class="panel-heading">Sheets in {{model.selectedSrcApp.name}}</div>
+                        <div class="panel-body scrollit">
+                            <div style="overflow-y:auto;">
+                                <table class="table table-bordered table-data">
+                                    <colgroup>
+                                        <col style="width:85px;min-width:85px;max-width:85px;">
+                                        <col style="width:100%;">
+                                    </colgroup>
+                                    <thead>
+                                        <tr>
+                                            <th class="column" style="width:85px;min-width:85px;max-width:85px;">Selected</th>
+                                            <th class="column" style="width:100%;">Sheet Name</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="row in model.srcSheets">
+                                            <td class="column">
+                                                <label class="lui-checkbox">
+                                            <input name="name" id="row[0]" class="lui-checkbox__input" type="checkbox" ng-model="row[0]" ng-change="model.checkBoxApps(row[0], row[1], row[2])"/>
+                                            <div class="lui-checkbox__check-wrap">
+                                                <span class="lui-checkbox__check" ></span>
+                                            </div>
+                                        </label>
+                                            </td>
+                                            <td class="column">
+                                                {{row.name}}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="right">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">Destination Hostname</div>
+                        <div class="form-group hostname">
+                            <input type="text" class="lui-input" placeholder="enter hostname here" ng-model="model.destServer" id="destHostname" name="destHostname"
+                            />
+                            <div class="frame lui-bg-default">
+                                <button class="lui-button" style="float: right; margin-top: 5px; margin-bottom: 5px" ng-click="model.loadDestApps()">Load Apps</button>
+                            </div>
+                            <div style="padding-bottom:15px">
+                                <select name="destAppsList" id="destAppsList" class="lui-select" ng-change="model.selectDestApp()" ng-model="model.selectedDestApp"
+                                    ng-init="model.initDestApps()" ng-options="app.name for app in model.destApps track by app.id">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="frame">
+                        <button id="moveit" class="lui-button lui-button--success">Move It!</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+</div>

@@ -1,0 +1,43 @@
+{
+  "name": "qmcu-shmover",
+  "version": "1.0.0",
+  "description": "QMC Utility to move sheets from one app to another",
+  "main": "testRun.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "testRun.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eapowertools/qmcu-shmover.git"
+  },
+  "keywords": [
+    "qmcu",
+    "qmc-utilities",
+    "qmc",
+    "utilities",
+    "shmover"
+  ],
+  "author": "EA Powertools",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/eapowertools/qmcu-shmover/issues"
+  },
+  "homepage": "https://github.com/eapowertools/qmcu-shmover#readme",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "body-parser": "^1.17.1",
+    "enigma.js": "^1.1.1",
+    "express": "^4.15.2",
+    "extend": "^3.0.0",
+    "leonardo-ui": "^1.0.2",
+    "lodash": "^4.17.4",
+    "path": "^0.12.7",
+    "qrs-interact": "^2.5.4",
+    "serializeapp": "^2.2.0",
+    "winston": "^2.3.1",
+    "winston-daily-rotate-file": "^1.4.6"
+  }
+}
