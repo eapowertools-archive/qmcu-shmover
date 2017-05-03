@@ -4,15 +4,23 @@ var logger = require("./logger");
 var Promise = require("bluebird");
 var serializeSheet = require("../node_modules/serializeApp/lib/getList");
 var config = require("../config/testConfig");
+var extend = require("extend");
 var _ = require("lodash");
 
 var loggerObject = {
     module: "export.js"
 };
 
-function exportSheet(appId, sheetId) {
-    return new Promise(function(resolve) {
+function exportSheet(hostname, appId, sheetId) {
+    return new Promise(function(resolve, reject) {
         var x = {};
+        logger.info("appId:" + appId);
+        logger.info("sheetId:" + sheetId);
+        config = extend(true, config, {
+            engine: {
+                hostname: hostname
+            }
+        });
         return enigma.getService('qix', enigmaInstance(config))
             .then(function(qix) {
                 logger.info("Connected to QIX.", loggerObject);
@@ -21,7 +29,7 @@ function exportSheet(appId, sheetId) {
                         x.appId = appId;
                         x.sheetId = sheetId;
                         x.app = app;
-
+                        logger.info("app opened")
                         return serializeSheet(app, "sheet");
                     })
                     .then(function(sheetArray) {
@@ -53,9 +61,16 @@ function exportSheet(appId, sheetId) {
                     })
                     .then(function(measProps) {
                         x.measProps = measProps;
+                        logger.info("Export Complete");
+                        x.app.session.close();
                         resolve(x);
                     });
+
             })
+            .catch(function(error) {
+                logger.error(error, loggerObject);
+                reject(error);
+            });
     })
 
 }

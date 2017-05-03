@@ -7,9 +7,8 @@ function exportImport(srcHost, srcAppId,sheets,destHost, destAppId)
 {
     return new Promise(function(resolve, reject)
     {
-        Promise.all(sheets.map(function(sheetId)
-        {
-            return exportStuff(srcHost, srcAppId, sheetId)
+    
+            exportStuff(srcHost, srcAppId, sheets[0])
             .then(function(result)
             {
                 return getAppOwner(destHost, destAppId)
@@ -18,18 +17,16 @@ function exportImport(srcHost, srcAppId,sheets,destHost, destAppId)
                     return importStuff(destHost, destAppId, owner, result)
                     .then(function(result)
                     {
-                        return result
+                        resolve(result);
+                    })
+                    .catch(function(error)
+                    {
+                        reject(error)
                     })
                 })
             })
-        }))
-        .then(function(resultArray)
-        {
-            resolve(resultArray)
-        })
-        .catch(function(error)
-        {
-            reject(error)
-        })
-    })
+        
+    });
 }
+
+module.exports = exportImport;

@@ -5,160 +5,192 @@ var Promise = require("bluebird");
 var config = require("../config/testConfig");
 var extend = require("extend");
 var _ = require("lodash");
-
+var serializeSheet = require("../node_modules/serializeApp/lib/getList");
 
 var loggerObject = {
     module: "import.js"
 };
 
-function importSheet(appId, owner, sheet) {
+function importSheet(hostname, appId, owner, sheet) {
+    return new Promise(function(resolve, reject) {
+        config = extend(true, config, {
+            engine: {
+                hostname: hostname,
+                userDirectory: owner.userDirectory,
+                userId: owner.userId
+            }
+        });
 
-    config = extend(true, config, {
-        engine: {
-            userDirectory: owner.userDirectory,
-            userId: owner.userId
-        }
-    });
+        var x = {};
+        return enigma.getService('qix', enigmaInstance(config))
+            .then(function(qix) {
+                logger.info("Connected to QIX.", loggerObject);
+                return qix.global.openDoc(appId, '', '', '', true)
+                    .then(function(app) {
+                        //get a sheet list and see if a similar named sheet exists
+                        x.app = app;
+                        return serializeSheet(app, "sheet");
+                    })
+                    .then(function(sheetArray) {
 
-
-    return enigma.getService('qix', enigmaInstance(config))
-        .then(function(qix) {
-            logger.info("Connected to QIX.", loggerObject);
-            return qix.global.openDoc(appId, '', '', '', true)
-                .then(function(app) {
-                    return app.createObject(sheet.sheet.qProperty)
-                        .then(function(handle) {
-                            console.log("Got to hear")
-                            return handle.setFullPropertyTree(sheet.sheet)
-                                .then(function() {
-                                    console.log("and here");
-                                    return sheet.sheet.qProperty.qInfo.qId;
-                                })
-                                .then(function() {
-                                    return Promise.all([importDimensions(app, sheet.dimProps), importMeasures(app, sheet.measProps)])
-                                })
-                                .catch(function(error) {
-                                    throw new Error("Error!");
-                                    //return error;
-                                })
+                        var sheetResult = sheetArray.filter(function(existingSheet) {
+                            return existingSheet.qProperty.qMetaDef.title.includes(sheet.sheet.qProperty.qMetaDef.title);
                         })
-                })
-        })
-        .catch(function(error) {
-            throw new Error("Error!");
-        })
+                        if (sheetResult.length != 0) {
+                            var sortedSheetResult = sheetResult.sort(function(a, b) {
+                                return b.qProperty.qMetaDef.title.length - a.qProperty.qMetaDef.title.length
+                            });
+                            sheet.sheet.qProperty.qMetaDef.title = sortedSheetResult[0].qProperty.qMetaDef.title + "_shmover";
+
+                        }
+                        sheet.sheet.qProperty.qExtendsId = "";
+                        return sheet;
+                    })
+                    .then(function(sheet) {
+                        return x.app.createObject(sheet.sheet.qProperty)
+                            .then(function(handle) {
+                                console.log("Got to hear")
+                                return handle.getLayout()
+                                    .then(function(layout) {
+                                        logger.info("shmoved sheet id is: " + layout.qInfo.qId);
+                                        sheet.sheet.qProperty.qInfo.qId = layout.qInfo.qId;
+                                        return handle.setFullPropertyTree(sheet.sheet)
+
+                                        .then(function() {
+                                            console.log("importing dims and measures");
+                                            return Promise.all([importDimensions(x.app, sheet.dimProps), importMeasures(x.app, sheet.measProps)])
+                                                .then(function(resultArray) {
+                                                    x.app.session.close();
+                                                    resolve(resultArray);
+                                                })
+                                        });
+                                    })
+                            })
+                    })
+                    .catch(function(error) {
+                        reject(new Error("Error!::" + JSON.stringify(error)));
+                    })
+            })
+    })
 }
-
-
 
 module.exports = importSheet;
 
 
+function closeApp(app) {
+    app.session.close();
+}
+
 function importDimensions(app, dims) {
     return new Promise(function(resolve) {
+        console.log(dims.length)
         var strShmover;
         getDimList(app)
             .then(function(destDims) {
-                //list of dims existing in the destination app.  Time to find matches.
+                //first get the differences
+                var matches = [];
                 if (destDims.length == 0) {
                     //nothing exists in the destination app, send all dimensions in.
+                    logger.info("no dims exist in destination app so I'm loadin' them all!", loggerObject);
+
+                } else {
+                    logger.info("There are dims in the destination app, don't want to create dupes of existing dimensions do we?", loggerObject);
+                    destDims.forEach(function(destDim) {
+                        matches.push(_.find(dims, function(dim) {
+                            return destDim.qId == dim.qInfo.qId;
+                        }));
+                    })
+
+                    // now let's get the differences if any
+                    dims = _.difference(dims, matches);
+
+                    //now let's update names where necessary.
+                    destDims.forEach(function(destDim) {
+                        dims.forEach(function(dim, index) {
+                            if (dim.qMetaDef.title == destDim.qTitle) {
+                                dims[index].qMetaDef.title = dim.qMetaDef.title + "_shmover"
+                            }
+                        })
+                    })
+
+                }
+
+                if (dims.length > 0) {
                     return Promise.all(dims.map(function(srcDim) {
                         return app.createDimension(srcDim)
                             .then(function(handle) {
+                                logger.info(srcDim.qInfo.qId + ": " + srcDim.qMetaDef.title + " created.");
                                 return srcDim.qInfo.qId + ": " + srcDim.qMetaDef.title + " created.";
                             })
                     }));
                 } else {
-                    //I need to see which ones exist and which ones don't.
-                    return Promise.all(destDims.map(function(d) {
-                        //find dim within destDims
-                        strShmover = "";
-                        var dimMatch = _.find(dims, function(srcDim) {
-                            if (d.qTitle == srcDim.qMetaDef.title && d.qId == srcDim.qInfo.qId) {
-                                return false;
-                            } else if (d.qId == srcDim.qInfo.qId && d.qTitle !== srcDim.qMetaDef.title) {
-                                return true;
-                            } else if (d.qId !== srcDim.qInfo.qId && d.qTitle == srcDim.qMetaDef.title) {
-                                strShmover = "_shmover";
-                                return true;
-                            } else {
-                                return true;
-                            }
-                        });
-
-                        if (dimMatch !== undefined) {
-                            dimMatch.qMetaDef.title = dimMatch.qMetaDef.title + strShmover;
-                            return app.createDimension(dimMatch)
-                                .then(function(handle) {
-                                    return dimMatch.qInfo.qId + ": " + dimMatch.qMetaDef.title + " created.";
-                                })
-                        } else {
-                            return "Dimension exists in destination application.";
-                        }
-
-                    }));
+                    logger.info("all dims matched so no new dimensions created.", loggerObject);
                 }
-
             })
             .then(function(resultArray) {
                 resolve(resultArray)
             })
-
-    })
+            .catch(function(error) {
+                logger.error(error);
+            });
+    });
 }
 
 function importMeasures(app, measures) {
     return new Promise(function(resolve) {
-        var strShmover;
+        console.log(measures.length)
         getMeasureList(app)
             .then(function(destMeas) {
-                //list of measures existing in the destination app.  Time to find matches.
+                //first get the differences
+                var matches = [];
                 if (destMeas.length == 0) {
                     //nothing exists in the destination app, send all measures in.
-                    return Promise.all(measures.map(function(srcMeas) {
-                        return app.createMeasure(srcMeas)
+                    logger.info("no measures exist in destination app so I'm loadin' them all!", loggerObject);
+
+                } else {
+                    logger.info("There are measures in the destination app, don't want to create dupes of existing measures do we?", loggerObject);
+                    destMeas.forEach(function(m) {
+                        matches.push(_.find(measures, function(measure) {
+                            return m.qId == measure.qInfo.qId;
+                        }));
+                    })
+
+                    // now let's get the differences if any
+                    measures = _.difference(measures, matches);
+
+                    console.log(measures);
+
+                    //now let's update names where necessary.
+                    destMeas.forEach(function(m) {
+                        measures.forEach(function(measure, index) {
+                            if (measure.qMetaDef.title == m.qTitle) {
+                                measures[index].qMetaDef.title = measure.qMetaDef.title + "_shmover"
+                            }
+                        });
+                    });
+                }
+
+                if (measures.length > 0) {
+                    return Promise.all(measures.map(function(srcMeasure) {
+                        return app.createMeasure(srcMeasure)
                             .then(function(handle) {
-                                return srcMeas.qInfo.qId + ": " + srcMeas.qMetaDef.title + " created.";
+                                logger.info(srcMeasure.qInfo.qId + ": " + srcMeasure.qMetaDef.title + " created.");
+                                return srcMeasure.qInfo.qId + ": " + srcMeasure.qMetaDef.title + " created.";
                             })
                     }));
                 } else {
-                    //I need to see which ones exist and which ones don't.
-                    return Promise.all(destMeas.map(function(m) {
-                        //find dim within destDims
-                        strShmover = "";
-                        var measMatch = _.find(measures, function(srcMeas) {
-                            if (m.qTitle == srcMeas.qMetaDef.title && m.qId == srcMeas.qInfo.qId) {
-                                return false;
-                            } else if (m.qId == srcMeas.qInfo.qId && m.qTitle !== srcMeas.qMetaDef.title) {
-                                return true;
-                            } else if (m.qId !== srcMeas.qInfo.qId && m.qTitle == srcMeas.qMetaDef.title) {
-                                strShmover = "_shmover";
-                                return true;
-                            } else {
-                                return true;
-                            }
-                        });
-
-                        if (measMatch !== undefined) {
-                            measMatch.qMetaDef.title = measMatch.qMetaDef.title + strShmover;
-                            return app.createDimension(measMatch)
-                                .then(function(handle) {
-                                    return measMatch.qInfo.qId + ": " + measMatch.qMetaDef.title + " created.";
-                                })
-                        } else {
-                            return "Dimension exists in destination application.";
-                        }
-
-                    }));
+                    logger.info("all measures matched so no new measures created.", loggerObject);
                 }
-
             })
             .then(function(resultArray) {
                 resolve(resultArray)
             })
-
-    })
+            .catch(function(error) {
+                logger.error(error);
+            });
+    });
 }
+
 
 
 function getDimList(app) {
@@ -184,6 +216,9 @@ function getDimList(app) {
                         }
                     }));
                 })
+        })
+        .catch(function(error) {
+            logger.error(error);
         })
 
 }
