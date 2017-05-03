@@ -6,7 +6,7 @@ var fs = require("fs");
 var path = require("path");
 var Promise = require("bluebird");
 var qrsInteract = require("qrs-interact");
-var config = require('./config/runtimeConfig');
+var config = require('./config');
 var exportImport = require("./lib/main");
 
 var winston = require("winston");

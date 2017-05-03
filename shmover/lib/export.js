@@ -3,7 +3,7 @@ var enigmaInstance = require("./enigmaInstance");
 var logger = require("./logger");
 var Promise = require("bluebird");
 var serializeSheet = require("../node_modules/serializeApp/lib/getList");
-var config = require("../config/testConfig");
+var config = require("../config");
 var extend = require("extend");
 var _ = require("lodash");
 

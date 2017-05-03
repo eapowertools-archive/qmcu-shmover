@@ -1,4 +1,4 @@
-var config = require('../config/testConfig');
+var config = require('../config');
 
 var qrsInstance = config.qrs;
 

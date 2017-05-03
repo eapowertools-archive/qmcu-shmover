@@ -1,6 +1,6 @@
 var winston = require("winston");
 var path = require("path");
-var config = require("../config/testConfig");
+var config = require("../config");
 require('winston-daily-rotate-file');
 //require('winston-socket.io');
 
