@@ -23,11 +23,11 @@
     z-index: 1000;*/
 }
 
-.shmover #page-content-body{
-    width:100%;
-    padding-left:10px;
-    padding-top:10px;
-    padding-right:10px;
+.shmover #page-content-body {
+    width: 100%;
+    padding-left: 10px;
+    padding-top: 10px;
+    padding-right: 10px;
 }
 
 .shmover #main {
@@ -37,25 +37,24 @@
 .shmover #left {
     display: flex;
     flex-direction: column;
-    float:left;
-    width:48%;
-    margin: 0, 1%,0,1%
+    float: left;
+    width: 48%;
+    margin: 0, 1%, 0, 1%
 }
 
 .shmover #right {
     display: flex;
     flex-direction: column;
-    float:right;
-    width:48%;
-    margin: 0, 1%,0,1%
-    }
+    float: right;
+    width: 48%;
+    margin: 0, 1%, 0, 1%
+}
 
 .shmover .hostname {
-    position:relative;
-    padding-top:15px;
-    padding-left:15px;
-    padding-right:15px;
-    
+    position: relative;
+    padding-top: 15px;
+    padding-left: 15px;
+    padding-right: 15px;
 }
 
 .shmover .title {
@@ -67,12 +66,31 @@
 }
 
 .shmover .scrollit {
-    overflow-y:auto;
-    height:300px;
+    overflow-y: auto;
+    height: 300px;
 }
 
 .shmover #moveit {
-    height:300px;
-    width:100%;
+    height: 100px;
+    width: 100%;
     font-size: 48px;
+}
+
+.shmover #output {
+    padding-top: 10px;
+}
+
+.shmover #output-area {
+    display: inline-block;
+    width: 100%;
+    height: 240px;
+}
+
+.shmover .panel-heading {
+    background-color: #595959;
+    border-color: #595959;
+}
+
+.shmover .panel {
+    border-color: #595959;
 }

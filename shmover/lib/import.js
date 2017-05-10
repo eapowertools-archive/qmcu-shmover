@@ -60,6 +60,7 @@ function importSheet(hostname, appId, owner, sheet) {
                                             console.log("importing dims and measures");
                                             return Promise.all([importDimensions(x.app, sheet.dimProps), importMeasures(x.app, sheet.measProps)])
                                                 .then(function(resultArray) {
+                                                    console.log(resultArray);
                                                     x.app.session.close();
                                                     resolve(resultArray);
                                                 })
@@ -83,111 +84,124 @@ function closeApp(app) {
 
 function importDimensions(app, dims) {
     return new Promise(function(resolve) {
-        console.log(dims.length)
-        var strShmover;
-        getDimList(app)
-            .then(function(destDims) {
-                //first get the differences
-                var matches = [];
-                if (destDims.length == 0) {
-                    //nothing exists in the destination app, send all dimensions in.
-                    logger.info("no dims exist in destination app so I'm loadin' them all!", loggerObject);
+        if (dims !== undefined) {
+            var strShmover;
+            getDimList(app)
+                .then(function(destDims) {
+                    //first get the differences
+                    var matches = [];
+                    if (destDims.length == 0) {
+                        //nothing exists in the destination app, send all dimensions in.
+                        logger.info("no dims exist in destination app so I'm loadin' them all!", loggerObject);
 
-                } else {
-                    logger.info("There are dims in the destination app, don't want to create dupes of existing dimensions do we?", loggerObject);
-                    destDims.forEach(function(destDim) {
-                        matches.push(_.find(dims, function(dim) {
-                            return destDim.qId == dim.qInfo.qId;
-                        }));
-                    })
-
-                    // now let's get the differences if any
-                    dims = _.difference(dims, matches);
-
-                    //now let's update names where necessary.
-                    destDims.forEach(function(destDim) {
-                        dims.forEach(function(dim, index) {
-                            if (dim.qMetaDef.title == destDim.qTitle) {
-                                dims[index].qMetaDef.title = dim.qMetaDef.title + "_shmover"
-                            }
+                    } else {
+                        logger.info("There are dims in the destination app, don't want to create dupes of existing dimensions do we?", loggerObject);
+                        destDims.forEach(function(destDim) {
+                            matches.push(_.find(dims, function(dim) {
+                                return destDim.qId == dim.qInfo.qId;
+                            }));
                         })
-                    })
 
-                }
+                        // now let's get the differences if any
+                        dims = _.difference(dims, matches);
 
-                if (dims.length > 0) {
-                    return Promise.all(dims.map(function(srcDim) {
-                        return app.createDimension(srcDim)
-                            .then(function(handle) {
-                                logger.info(srcDim.qInfo.qId + ": " + srcDim.qMetaDef.title + " created.");
-                                return srcDim.qInfo.qId + ": " + srcDim.qMetaDef.title + " created.";
+                        //now let's update names where necessary.
+                        destDims.forEach(function(destDim) {
+                            dims.forEach(function(dim, index) {
+                                if (dim.qMetaDef.title == destDim.qTitle) {
+                                    dims[index].qMetaDef.title = dim.qMetaDef.title + "_shmover"
+                                }
                             })
-                    }));
-                } else {
-                    logger.info("all dims matched so no new dimensions created.", loggerObject);
-                }
-            })
-            .then(function(resultArray) {
-                resolve(resultArray)
-            })
-            .catch(function(error) {
-                logger.error(error);
-            });
+                        })
+
+                    }
+
+                    if (dims.length > 0) {
+                        return Promise.all(dims.map(function(srcDim) {
+                            return app.createDimension(srcDim)
+                                .then(function(handle) {
+                                    logger.info(srcDim.qInfo.qId + ": " + srcDim.qMetaDef.title + " created.");
+                                    return srcDim.qInfo.qId + ": " + srcDim.qMetaDef.title + " created.";
+                                })
+                        }));
+                    } else {
+                        logger.info("all dims matched so no new dimensions created.", loggerObject);
+                        resolve("all dims matched so no new dimensions created.");
+                    }
+                })
+                .then(function(resultArray) {
+                    resolve(resultArray)
+                })
+                .catch(function(error) {
+                    logger.error(error);
+                    resolve(error);
+                });
+        } else {
+            console.log("no dims used in this sheet")
+            resolve("no dims used in this sheet");
+        }
     });
 }
 
 function importMeasures(app, measures) {
     return new Promise(function(resolve) {
-        console.log(measures.length)
-        getMeasureList(app)
-            .then(function(destMeas) {
-                //first get the differences
-                var matches = [];
-                if (destMeas.length == 0) {
-                    //nothing exists in the destination app, send all measures in.
-                    logger.info("no measures exist in destination app so I'm loadin' them all!", loggerObject);
+        if (measures !== undefined) {
+            getMeasureList(app)
+                .then(function(destMeas) {
+                    //first get the differences
+                    var matches = [];
+                    if (destMeas.length == 0) {
+                        //nothing exists in the destination app, send all measures in.
+                        logger.info("no measures exist in destination app so I'm loadin' them all!", loggerObject);
 
-                } else {
-                    logger.info("There are measures in the destination app, don't want to create dupes of existing measures do we?", loggerObject);
-                    destMeas.forEach(function(m) {
-                        matches.push(_.find(measures, function(measure) {
-                            return m.qId == measure.qInfo.qId;
-                        }));
-                    })
+                    } else {
+                        logger.info("There are measures in the destination app, don't want to create dupes of existing measures do we?", loggerObject);
+                        destMeas.forEach(function(m) {
+                            matches.push(_.find(measures, function(measure) {
+                                return m.qId == measure.qInfo.qId;
+                            }));
+                        })
 
-                    // now let's get the differences if any
-                    measures = _.difference(measures, matches);
+                        // now let's get the differences if any
+                        measures = _.difference(measures, matches);
 
-                    console.log(measures);
+                        console.log(measures);
 
-                    //now let's update names where necessary.
-                    destMeas.forEach(function(m) {
-                        measures.forEach(function(measure, index) {
-                            if (measure.qMetaDef.title == m.qTitle) {
-                                measures[index].qMetaDef.title = measure.qMetaDef.title + "_shmover"
-                            }
+                        //now let's update names where necessary.
+                        destMeas.forEach(function(m) {
+                            measures.forEach(function(measure, index) {
+                                if (measure.qMetaDef.title == m.qTitle) {
+                                    measures[index].qMetaDef.title = measure.qMetaDef.title + "_shmover"
+                                }
+                            });
                         });
-                    });
-                }
+                    }
 
-                if (measures.length > 0) {
-                    return Promise.all(measures.map(function(srcMeasure) {
-                        return app.createMeasure(srcMeasure)
-                            .then(function(handle) {
-                                logger.info(srcMeasure.qInfo.qId + ": " + srcMeasure.qMetaDef.title + " created.");
-                                return srcMeasure.qInfo.qId + ": " + srcMeasure.qMetaDef.title + " created.";
-                            })
-                    }));
-                } else {
-                    logger.info("all measures matched so no new measures created.", loggerObject);
-                }
-            })
-            .then(function(resultArray) {
-                resolve(resultArray)
-            })
-            .catch(function(error) {
-                logger.error(error);
-            });
+                    if (measures.length > 0) {
+                        return Promise.all(measures.map(function(srcMeasure) {
+                            return app.createMeasure(srcMeasure)
+                                .then(function(handle) {
+                                    logger.info(srcMeasure.qInfo.qId + ": " + srcMeasure.qMetaDef.title + " created.");
+                                    return srcMeasure.qInfo.qId + ": " + srcMeasure.qMetaDef.title + " created.";
+                                })
+                        }));
+                    } else {
+                        logger.info("all measures matched so no new measures created.", loggerObject);
+                        resolve("no measures created because it was not necessary");
+                    }
+                })
+                .then(function(resultArray) {
+                    resolve(resultArray)
+                })
+                .catch(function(error) {
+                    logger.error(error);
+                    resolve(error)
+                });
+        } else {
+            console.log("no measures used in this sheet")
+            resolve("no measures used in this sheet");
+        }
+
     });
 }
 

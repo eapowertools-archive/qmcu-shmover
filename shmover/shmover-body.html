@@ -105,12 +105,26 @@
                         </div>
                     </div>
                 </div>
-                <div class="frame">
+                <div id="btnArea">
                     <button id="moveit" class="lui-button lui-button--success" ng-click="model.moveIt()" ng-class=" model.valSheetSelection && model.valDestAppSelected ? 'lui-button--success' : 'lui-button--success lui-disabled'">Move It!</button>
+                </div>
+                <div id="output" class="frame">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            Sheet Mover Status:
+                        </div>
+                        <div class="panel-body">
+                            <div class="frame lui-bg-default">
+                                <textarea id="output-area" readonly class="lui-textarea" ng-model="model.statusOutput" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
+
     </div>
+</div>
 
 
 </div>

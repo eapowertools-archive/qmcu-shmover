@@ -1,6 +1,9 @@
 (function() {
     "use strict";
-    var module = angular.module("QMCUtilities", []);
+    var module = angular.module("QMCUtilities", ["btford.socket-io"])
+        .factory('mySocket', function(socketFactory) {
+            return socketFactory();
+        });
 
     function fetchApps($http, hostname) {
         return $http.post("./shmover/getapplist", { hostname: hostname })
@@ -48,9 +51,10 @@
         model.showSrcSheets = false;
         model.valSheetSelection = false;
         model.valDestAppSelected = false;
+        model.statusOutput = "";
     }
 
-    function shmoverController($scope, $http, $timeout, qmcuWindowLocationService) {
+    function shmoverController($scope, $http, $timeout, mySocket, qmcuWindowLocationService) {
         var model = this;
         model.srcServer = "";
         model.srcApps = [];
@@ -64,10 +68,16 @@
         model.valSheetSelection = false;
         model.valDestAppSelected = false;
         model.host = qmcuWindowLocationService.host;
+        model.statusOutput = "";
 
-        model.$onInit = function() {
+        mySocket.on("shmover", function(msg) {
+            console.log(msg);
+            model.statusOutput += msg + "\n";
+        });
 
-        }
+        // model.$onInit = function() {
+        //     model.statusOutput = "Welcome to Shmover!";
+        // }
 
         model.loadSourceApps = function() {
             fetchApps($http, model.srcServer)
@@ -153,7 +163,7 @@
         transclude: true,
         templateUrl: "plugins/shmover/shmover-body.html",
         controllerAs: "model",
-        controller: ["$scope", "$http", "$timeout", "qmcuWindowLocationService", shmoverController]
+        controller: ["$scope", "$http", "$timeout", "mySocket", "qmcuWindowLocationService", shmoverController]
     });
 
 

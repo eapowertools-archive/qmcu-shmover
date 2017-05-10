@@ -45,18 +45,44 @@ function exportSheet(hostname, appId, sheetId) {
                         var sheetObjects = sheet.qChildren;
                         var dims = [];
                         var meas = [];
-                        sheetObjects.forEach(function(object) {
-                            dims = dims.concat(object.qProperty.qHyperCubeDef.qDimensions);
-                            meas = meas.concat(object.qProperty.qHyperCubeDef.qMeasures);
-                        });
-                        //make unique
-                        x.uniqueDims = _.uniqBy(dims, 'qLibraryId');
-                        x.uniqueMeas = _.uniqBy(meas, 'qLibraryId');
-                        return getDimProps(x.app, x.uniqueDims);
+                        if (sheet.qChildren.length > 0) {
+                            sheetObjects.forEach(function(object) {
+                                if (object.qProperty.hasOwnProperty("qHyperCubeDef")) {
+                                    if (object.qProperty.qHyperCubeDef.qDimensions.length > 0) {
+                                        dims = dims.concat(object.qProperty.qHyperCubeDef.qDimensions);
+                                    } else {
+                                        dims = [];
+                                    }
+                                    if (object.qProperty.qHyperCubeDef.qMeasures.length > 0) {
+                                        meas = meas.concat(object.qProperty.qHyperCubeDef.qMeasures);
+                                    } else {
+                                        meas = [];
+                                    }
+                                    //make unique
+                                    x.uniqueDims = _.uniqBy(dims, 'qLibraryId');
+                                    x.uniqueMeas = _.uniqBy(meas, 'qLibraryId');
+                                    return getDimProps(x.app, x.uniqueDims);
+                                } else {
+                                    x.uniqueDims = [];
+                                    x.uniqueMeas = [];
+                                    return [];
+                                }
+                            });
+
+                        } else {
+                            x.uniqueDims = [];
+                            x.uniqueMeas = [];
+                            return [];
+                        }
+
                     })
                     .then(function(dimProps) {
                         x.dimProps = dimProps;
-                        return getMeasProps(x.app, x.uniqueMeas);
+                        if (x.uniqueMeas.length > 0) {
+                            return getMeasProps(x.app, x.uniqueMeas);
+                        } else {
+                            return [];
+                        }
 
                     })
                     .then(function(measProps) {

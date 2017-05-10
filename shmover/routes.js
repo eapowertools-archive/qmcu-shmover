@@ -1,5 +1,4 @@
 var express = require('express');
-var router = express.Router();
 var bodyParser = require("body-parser");
 var parseUrlencoded = bodyParser.urlencoded({ extended: false });
 var fs = require("fs");
@@ -8,6 +7,14 @@ var Promise = require("bluebird");
 var qrsInteract = require("qrs-interact");
 var config = require('./config');
 var exportImport = require("./lib/main");
+
+var socket = require('socket.io-client')('https://localhost:9945', {
+    secure: true,
+    reconnect: true
+});
+
+var router = express.Router();
+
 
 var winston = require("winston");
 require("winston-daily-rotate-file");
@@ -61,19 +68,6 @@ router.use('/data', express.static(config.thisServer.pluginPath + "/shmover/data
 router.use('/output', express.static(config.thisServer.pluginPath + "/shmover/output"));
 
 
-router.route("/export")
-    .post(function(req, res) {
-        logger.info("Starting shmover export process", { module: "shmover-routes", method: "export" });
-        var body = req.body;
-        //send in body.appId and body.sheetId
-    });
-
-router.route("/import")
-    .post(function(req, res) {
-        logger.info("Copying sheets to their new home", { module: "shmover-routes", method: "import" });
-        var body = req.body;
-        //send in destination app as body.appId and sheet Object information as body.sheetProps 
-    })
 
 router.route("/exportimport")
     .post(function(req, res) {
@@ -86,9 +80,18 @@ router.route("/exportimport")
         //     destHost: body.destHost,
         //     destAppId: body.destAppId
         // }
+
+        socket.emit("shmover", "Commencing sheet export process");
+        socket.emit("shmover", "Duplicating sheets from " + body.srcAppId + " on " + body.srcHost + " to " + body.destAppId + " on " + body.destHost);
+
         exportImport(body.srcHost, body.srcAppId, body.sheets, body.destHost, body.destAppId)
             .then(function(response) {
+                socket.emit("shmover", "Sheet Mover processing complete.");
                 res.json(response);
+            })
+            .catch(function(error) {
+                socket.emit("shmover", "An error occurred with Sheet Mover: " + error.stack);
+                res.status(400).json(error);
             })
     })
 
@@ -96,7 +99,8 @@ router.route("/getapplist")
     .post(function(req, res) {
         var body = req.body;
         qrs.UpdateHostname(req.body.hostname);
-
+        console.log("Getting Applist");
+        socket.emit("shmover", "getting applist");
         qrs.Get("app/full")
             .then(function(result) {
                 res.json(result.body)
