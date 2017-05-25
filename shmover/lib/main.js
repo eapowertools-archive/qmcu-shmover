@@ -11,7 +11,7 @@ var socket = require('socket.io-client')('https://localhost:9945', {
 function exportImport(srcHost, srcAppId, sheets, destHost, destAppId) {
     return new Promise(function(resolve, reject) {
         socket.emit("shmover", "Export started.")
-        exportStuff(srcHost, srcAppId, sheets[0])
+        exportStuff(srcHost, srcAppId, sheets)
             .then(function(result) {
                 socket.emit("shmover", "Export complete.  Obtaining destination application owner");
                 return getAppOwner(destHost, destAppId)

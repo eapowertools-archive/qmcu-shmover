@@ -90,6 +90,7 @@ function exportSheet(hostname, appId, sheetIds) {
                     .then(function(resultArray) {
                         //this is a list of all the sheets to be copied over.
                         //because we are done, we can get to unique dims, measures, and viz, then get props and add to a new object to return.
+                        console.log(resultArray);
                         var uniqueDims = _.uniqBy(dims, 'qLibraryId');
                         var uniqueMeas = _.uniqBy(meas, 'qLibraryId');
                         var uniqueVizs = _.uniq(vizs);
@@ -226,7 +227,8 @@ function getVizProps(app, vizs) {
                                         color: props.color,
                                         legend: props.legend,
                                         visualization: props.visualization,
-                                        masterVersion: props.masterVersion
+                                        masterVersion: props.masterVersion,
+                                        qHyperCubeDef: props.qHyperCubeDef
                                     };
                                 })
                         })

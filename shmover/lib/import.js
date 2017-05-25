@@ -36,7 +36,7 @@ function importSheet(hostname, appId, owner, importInfo) {
                     })
                     .then(function(resultArray) {
                         //now that dims, measures, and viz are imported it's time to import the sheets that use them.
-                        return serializeSheet(app, "sheet");
+                        return serializeSheet(x.app, "sheet");
                     })
                     .then(function(sheetArray) {
                         return Promise.all(importInfo.sheets.map(function(sheet) {
@@ -57,6 +57,8 @@ function importSheet(hostname, appId, owner, importInfo) {
                     })
                     .then(function(resultArray) {
                         //Now create the sheets
+                        console.log("Importing Sheets")
+                        console.log(resultArray);
                         return Promise.all(resultArray.map(function(sheet) {
                             return x.app.createObject(sheet.qProperty)
                                 .then(function(handle) {
@@ -80,6 +82,7 @@ function importSheet(hostname, appId, owner, importInfo) {
                         resolve(resultArray);
                     })
                     .catch(function(error) {
+                        console.log(error.message);
                         reject(new Error("Error!::" + JSON.stringify(error)));
                     })
             })
@@ -176,7 +179,7 @@ function importMeasures(app, measures) {
                         // now let's get the differences if any
                         measures = _.difference(measures, matches);
 
-                        console.log(measures);
+                        //console.log(measures);
 
                         //now let's update names where necessary.
                         destMeas.forEach(function(m) {
@@ -219,7 +222,7 @@ function importMeasures(app, measures) {
 function importViz(app, vizs) {
     return new Promise(function(resolve) {
         if (vizs !== undefined) {
-            getMeasureList(app)
+            getVizList(app)
                 .then(function(destViz) {
                     //first get the differences
                     var matches = [];
@@ -238,7 +241,7 @@ function importViz(app, vizs) {
                         // now let's get the differences if any
                         vizs = _.difference(vizs, matches);
 
-                        console.log(vizs);
+                        //console.log(vizs);
 
                         //now let's update names where necessary.
                         destViz.forEach(function(v) {
@@ -264,6 +267,7 @@ function importViz(app, vizs) {
                     }
                 })
                 .then(function(resultArray) {
+
                     resolve(resultArray)
                 })
                 .catch(function(error) {
