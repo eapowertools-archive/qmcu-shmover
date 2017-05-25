@@ -11,7 +11,7 @@ var loggerObject = {
     module: "import.js"
 };
 
-function importSheet(hostname, appId, owner, sheet) {
+function importSheet(hostname, appId, owner, importInfo) {
     return new Promise(function(resolve, reject) {
         config = extend(true, config, {
             engine: {
@@ -29,44 +29,55 @@ function importSheet(hostname, appId, owner, sheet) {
                     .then(function(app) {
                         //get a sheet list and see if a similar named sheet exists
                         x.app = app;
+                        //return serializeSheet(app, "sheet");
+                        //start by importing dimensions, measures, and visualizations
+                        return Promise.all([importDimensions(x.app, importInfo.dimProps), importMeasures(x.app, importInfo.measProps), importViz(x.app, importInfo.vizProps)])
+
+                    })
+                    .then(function(resultArray) {
+                        //now that dims, measures, and viz are imported it's time to import the sheets that use them.
                         return serializeSheet(app, "sheet");
                     })
                     .then(function(sheetArray) {
-
-                        var sheetResult = sheetArray.filter(function(existingSheet) {
-                            return existingSheet.qProperty.qMetaDef.title.includes(sheet.sheet.qProperty.qMetaDef.title);
-                        })
-                        if (sheetResult.length != 0) {
-                            var sortedSheetResult = sheetResult.sort(function(a, b) {
-                                return b.qProperty.qMetaDef.title.length - a.qProperty.qMetaDef.title.length
-                            });
-                            sheet.sheet.qProperty.qMetaDef.title = sortedSheetResult[0].qProperty.qMetaDef.title + "_shmover";
-
-                        }
-                        sheet.sheet.qProperty.qExtendsId = "";
-                        return sheet;
-                    })
-                    .then(function(sheet) {
-                        return x.app.createObject(sheet.sheet.qProperty)
-                            .then(function(handle) {
-                                console.log("Got to hear")
-                                return handle.getLayout()
-                                    .then(function(layout) {
-                                        logger.info("shmoved sheet id is: " + layout.qInfo.qId);
-                                        sheet.sheet.qProperty.qInfo.qId = layout.qInfo.qId;
-                                        return handle.setFullPropertyTree(sheet.sheet)
-
-                                        .then(function() {
-                                            console.log("importing dims and measures");
-                                            return Promise.all([importDimensions(x.app, sheet.dimProps), importMeasures(x.app, sheet.measProps)])
-                                                .then(function(resultArray) {
-                                                    console.log(resultArray);
-                                                    x.app.session.close();
-                                                    resolve(resultArray);
-                                                })
-                                        });
-                                    })
+                        return Promise.all(importInfo.sheets.map(function(sheet) {
+                            var sheetResult = sheetArray.filter(function(existingSheet) {
+                                return existingSheet.qProperty.qMetaDef.title.includes(sheet.qProperty.qMetaDef.title);
                             })
+                            if (sheetResult.length != 0) {
+                                var sortedSheetResult = sheetResult.sort(function(a, b) {
+                                    return b.qProperty.qMetaDef.title.length - a.qProperty.qMetaDef.title.length
+                                });
+                                sheet.qProperty.qMetaDef.title = sortedSheetResult[0].qProperty.qMetaDef.title + "_shmover";
+
+                            }
+                            //sheet.sheet.qProperty.qExtendsId = "";
+                            return sheet;
+                        }));
+
+                    })
+                    .then(function(resultArray) {
+                        //Now create the sheets
+                        return Promise.all(resultArray.map(function(sheet) {
+                            return x.app.createObject(sheet.qProperty)
+                                .then(function(handle) {
+                                    console.log("Got to hear")
+                                    return handle.getLayout()
+                                        .then(function(layout) {
+                                            logger.info("shmoved sheet id is: " + layout.qInfo.qId);
+                                            sheet.qProperty.qInfo.qId = layout.qInfo.qId;
+                                            return handle.setFullPropertyTree(sheet)
+                                                .then(function() {
+                                                    console.log("Sheet created");
+                                                    return;
+                                                })
+                                        })
+                                })
+                        }))
+                    })
+                    .then(function(resultArray) {
+                        console.log(resultArray);
+                        x.app.session.close();
+                        resolve(resultArray);
                     })
                     .catch(function(error) {
                         reject(new Error("Error!::" + JSON.stringify(error)));
@@ -205,7 +216,67 @@ function importMeasures(app, measures) {
     });
 }
 
+function importViz(app, vizs) {
+    return new Promise(function(resolve) {
+        if (vizs !== undefined) {
+            getMeasureList(app)
+                .then(function(destViz) {
+                    //first get the differences
+                    var matches = [];
+                    if (destViz.length == 0) {
+                        //nothing exists in the destination app, send all measures in.
+                        logger.info("no viz exist in destination app so I'm loadin' them all!", loggerObject);
 
+                    } else {
+                        logger.info("There are master viz in the destination app, don't want to create dupes of existing master viz do we?", loggerObject);
+                        destViz.forEach(function(v) {
+                            matches.push(_.find(vizs, function(viz) {
+                                return v.qId == viz.qInfo.qId;
+                            }));
+                        })
+
+                        // now let's get the differences if any
+                        vizs = _.difference(vizs, matches);
+
+                        console.log(vizs);
+
+                        //now let's update names where necessary.
+                        destViz.forEach(function(v) {
+                            vizs.forEach(function(viz, index) {
+                                if (viz.qMetaDef.title == v.qTitle) {
+                                    vizs[index].qMetaDef.title = viz.qMetaDef.title + "_shmover"
+                                }
+                            });
+                        });
+                    }
+
+                    if (vizs.length > 0) {
+                        return Promise.all(vizs.map(function(srcViz) {
+                            return app.createObject(srcViz)
+                                .then(function(handle) {
+                                    logger.info(srcViz.qInfo.qId + ": " + srcViz.qMetaDef.title + " created.");
+                                    return srcViz.qInfo.qId + ": " + srcViz.qMetaDef.title + " created.";
+                                })
+                        }));
+                    } else {
+                        logger.info("all master viz matched so no new master viz created.", loggerObject);
+                        resolve("no master viz created because it was not necessary");
+                    }
+                })
+                .then(function(resultArray) {
+                    resolve(resultArray)
+                })
+                .catch(function(error) {
+                    logger.error(error);
+                    resolve(error)
+                });
+        } else {
+            console.log("no MasterViz used in this sheet")
+            resolve("no MasterViz used in this sheet");
+        }
+
+    });
+}
 
 function getDimList(app) {
     var dimList = {
@@ -261,4 +332,35 @@ function getMeasureList(app) {
                     }));
                 })
         })
+}
+
+function getVizList(app) {
+    var vizList = {
+        qAppObjectListDef: {
+            qType: "masterobject",
+            qData: {
+                id: "/qInfo/qId"
+            }
+        },
+        qInfo: {
+            qId: 'masterobjectList',
+            qType: 'masterobjectList'
+        },
+        qMetaDef: {},
+        qExtendsId: ''
+    };
+
+    return app.createSessionObject(vizList)
+        .then(function(list) {
+            return list.getLayout().then(function(layout) {
+                return Promise.all(layout.qAppObjectList.qItems.map(function(v) {
+                    return app.getObject(v.qInfo.qId).then(function(handle) {
+                        return {
+                            qId: v.qInfo.qId,
+                            qTitle: v.qMeta.title
+                        }
+                    });
+                }));
+            });
+        });
 }
